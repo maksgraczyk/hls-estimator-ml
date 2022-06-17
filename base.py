@@ -2,8 +2,10 @@ from abc import ABC
 
 
 class BaseEstimation(ABC):
-    ASIC_METRICS = ['latency', 'static_power', 'dynamic_power', 'area']
-    FPGA_METRICS = ['latency', 'lut', 'ff', 'dsp', 'bram', 'dynamic_power']
+    METRICS = {
+        'asic': ['latency', 'static_power', 'dynamic_power', 'area'],
+        'fpga': ['latency', 'lut', 'ff', 'dsp', 'dynamic_power']
+    }
     
     @abstractmethod
     def predict(self, model, clock_frequency, device):
