@@ -1,4 +1,5 @@
 import tensorflow.keras as keras
+import numpy as np
 from tensorflow.keras.models import load_model
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, BatchNormalization, \
     Dense, Activation, ReLU, Softmax
@@ -13,21 +14,33 @@ class SingleOutputEstimation(BaseEstimation):
         
         self._models = {
             'asic': [
-                load_model(path_asic / 'Conv2D'),
-                load_model(path_asic / 'MaxPooling2D'),
-                load_model(path_asic / 'BatchNormalization'),
-                load_model(path_asic / 'Dense'),
-                load_model(path_asic / 'ReLU'),
-                load_model(path_asic / 'Softmax')
+                {x: load_model(path_asic / f'Conv2D_{x}')
+                 for x in self.METRICS['asic']},
+                {x: load_model(path_asic / f'MaxPooling2D_{x}')
+                 for x in self.METRICS['asic']},
+                {x: load_model(path_asic / f'BatchNormalization_{x}')
+                 for x in self.METRICS['asic']},
+                {x: load_model(path_asic / f'Dense_{x}')
+                 for x in self.METRICS['asic']},
+                {x: load_model(path_asic / f'ReLU_{x}')
+                 for x in self.METRICS['asic']},
+                {x: load_model(path_asic / f'Softmax_{x}')
+                 for x in self.METRICS['asic']}
             ],
 
             'fpga': [
-                load_model(path_fpga / 'Conv2D'),
-                load_model(path_fpga / 'MaxPooling2D'),
-                load_model(path_fpga / 'BatchNormalization'),
-                load_model(path_fpga / 'Dense'),
-                load_model(path_fpga / 'ReLU'),
-                load_model(path_fpga / 'Softmax')
+                {x: load_model(path_fpga / f'Conv2D_{x}')
+                 for x in self.METRICS['fpga']},
+                {x: load_model(path_fpga / f'MaxPooling2D_{x}')
+                 for x in self.METRICS['fpga']},
+                {x: load_model(path_fpga / f'BatchNormalization_{x}')
+                 for x in self.METRICS['fpga']},
+                {x: load_model(path_fpga / f'Dense_{x}')
+                 for x in self.METRICS['fpga']},
+                {x: load_model(path_fpga / f'ReLU_{x}')
+                 for x in self.METRICS['fpga']},
+                {x: load_model(path_fpga / f'Softmax_{x}')
+                 for x in self.METRICS['fpga']}
             ]
         }
 
@@ -57,9 +70,26 @@ class SingleOutputEstimation(BaseEstimation):
                                       'supported')
 
         return index
-    
-    def _get_model(self, layer, device):
-        return self._models[device][self._get_model_index(layer)]
+
+    def _get_layer_data(self, layer):
+        layer_data = []
+        
+        if isinstance(layer, Conv2D):
+            pass
+        elif isinstance(layer, MaxPooling2D):
+            pass
+        elif isinstance(layer, BatchNormalization):
+            pass
+        elif isinstance(layer, Dense):
+            pass
+        elif isinstance(layer, ReLU):
+            pass
+        elif isinstance(layer, Softmax):
+            pass
+        else:
+            pass
+
+        return layer_data
     
     def predict(self, model, clock_frequency, device):
         if not isinstance(model, keras.Model):
@@ -68,7 +98,7 @@ class SingleOutputEstimation(BaseEstimation):
         if device not in ['asic', 'fpga']:
             raise RuntimeError('device must be either "asic" or "fpga"')
 
-        layers = [
+        layers_by_type = [
             [],  # Conv2D
             [],  # MaxPooling2D
             [],  # BatchNormalization
@@ -77,7 +107,50 @@ class SingleOutputEstimation(BaseEstimation):
             []   # Softmax
         ]
 
-        all_layers = model.layers
+        for layer in model.layers:
+            layers_by_type[self._get_model_index(layer)].append(layer)
 
-        for layer in all_layers:
-            layers[self._get_model_index(layer)].append(layer)
+        data = [
+            [],  # Conv2D
+            [],  # MaxPooling2D
+            [],  # BatchNormalization
+            [],  # Dense
+            [],  # ReLU
+            []   # Softmax
+        ]
+
+        result = {x: 0 for x in self.METRICS[device]}
+
+        for i, layers in enumerate(layers_by_type):
+            data[i] = [[clock_frequency] + self._get_layer_data(layer)
+                       for layer in layers]
+
+        for i in len(data):
+            models = self._models[device][i]
+
+            for metric in result.keys():
+                result[metric] += \
+                    np.sum(models[metric].predict(np.array(data[i])))
+
+        units = {
+            'asic': {
+                'latency': 'ns',
+                'static_power': 'uW',
+                'dynamic_power': 'uW',
+                'area': 'um^2'
+            },
+
+            'fpga': {
+                'latency': 'ns',
+                'lut': '',
+                'ff': '',
+                'dsp': '',
+                'bram': '',
+                'dynamic_power': 'W'
+            }
+        }
+        
+        for key, value in result.items():
+            result[key] = (value, units[device][key])
+
+        return result
