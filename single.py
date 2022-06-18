@@ -2,6 +2,7 @@ import tensorflow.keras as keras
 import numpy as np
 import hls4ml
 import re
+from . import BaseEstimation
 from hls4ml.converters import convert_from_keras_model
 from tensorflow.keras.models import load_model
 from tensorflow.keras.layers import MaxPooling2D, Activation, ReLU, Softmax
