@@ -1,4 +1,3 @@
-import tensorflow.keras as keras
 import numpy as np
 import hls4ml
 import re
@@ -273,12 +272,8 @@ class SingleOutputEstimation(BaseEstimation):
         
         return result
     
-    def predict(self, model, clock_frequency, device):
-        if not isinstance(model, keras.Model):
-            raise RuntimeError('model is not an instance of keras.Model')
-
-        if device not in ['asic', 'fpga']:
-            raise RuntimeError('device must be either "asic" or "fpga"')
+    def predict(self, model, clock_frequency):
+        super().predict(model, clock_frequency)
 
         layers_by_type = [
             [],  # Conv2D

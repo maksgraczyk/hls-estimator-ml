@@ -1,3 +1,4 @@
+from tensorflow.keras import Model
 from abc import ABC, abstractmethod
 
 
@@ -8,10 +9,10 @@ class BaseEstimation(ABC):
     }
     
     @abstractmethod
-    def predict(self, model, clock_frequency, device):
+    def predict(self, model, clock_frequency):
         """
-        Predicts hardware metrics for a given neural network model, clock
-        frequency, and device type.
+        Predicts hardware metrics for a given neural network model and clock
+        frequency.
 
         Args:
         ----------
@@ -21,10 +22,6 @@ class BaseEstimation(ABC):
         clock_frequency : int or float
            The clock frequency in MHz.
 
-        device : str, either 'asic' or 'fpga'
-           The device type for which the estimation should be made (i.e.
-           either ASIC or FPGA).
-
         Returns:
         ----------
         A dictionary containing the predicted hardware metrics for the
@@ -32,4 +29,5 @@ class BaseEstimation(ABC):
         or of form (X, Y), where X is the predicted value and Y is a string
         with the unit used.
         """
-        pass
+        if not isinstance(model, Model):
+            raise RuntimeError('model is not an instance of keras.Model')
