@@ -1,13 +1,15 @@
 import numpy as np
 import hls4ml
 import re
+import sys
 from . import BaseEstimation
 from hls4ml.converters import convert_from_keras_model
+from tensorflow.keras import backend as K
 from tensorflow.keras.models import load_model
 from tensorflow.keras.layers import MaxPooling2D, Activation, ReLU, Softmax
 from tensorflow.keras.activations import softmax
 from qkeras.quantizers import quantized_bits, quantized_relu
-from qkeras.qlayers import QDense
+from qkeras.qlayers import QDense, QActivation
 from qkeras.qnormalization import QBatchNormalization
 from qkeras.qconvolutional import QConv2D
 from pathlib import Path
@@ -71,20 +73,19 @@ class SingleOutputEstimation(BaseEstimation):
             index = 2
         elif isinstance(layer, QDense):
             index = 3
-        elif isinstance(layer, ReLU):
+        elif isinstance(layer, ReLU) or \
+             (isinstance(layer, QActivation) and isinstance(layer.activation,
+                                                            quantized_relu)):
             index = 4
         elif isinstance(layer, Softmax):
             index = 5
-        elif isinstance(layer, Activation):
-            if isinstance(layer.activation, relu) or \
-               isinstance(layer.activation, quantized_relu):
-                index = 4
-            elif isinstance(layer.activation, softmax):
-                index = 5
+        elif isinstance(layer, Activation) and isinstance(layer.activation,
+                                                          softmax):
+            index = 5
 
         if index is None:
-            raise NotImplementedError(f'Layer type {type(layer)} not '
-                                      'supported')
+            print(f'Layer type {type(layer)} not supported, ignoring',
+                  file=sys.stderr)
 
         return index
 
@@ -231,9 +232,9 @@ class SingleOutputEstimation(BaseEstimation):
 
         with TemporaryDirectory() as tmp_dir:
             convert_from_keras_model(model, hls_config=config,
-                                     output_dir=tmp_dir.name).write()
+                                     output_dir=tmp_dir).write()
 
-            tmp_path = Path(tmp_dir.name) / 'firmware' / 'weights'
+            tmp_path = Path(tmp_dir) / 'firmware' / 'weights'
             weight_file_paths = list(filter(lambda x: x.match('w*.txt'),
                                             tmp_path.iterdir()))
             
@@ -293,10 +294,13 @@ class SingleOutputEstimation(BaseEstimation):
         conv_dense_names = []
 
         for layer in model.layers:
-            layers_by_type[self._get_model_index(layer)].append(layer)
+            index = self._get_model_index(layer)
 
-            if type(layer) in [QConv2D, QDense]:
-                conv_dense_names.append(layer.name)
+            if index is not None:
+                layers_by_type[self._get_model_index(layer)].append(layer)
+
+                if type(layer) in [QConv2D, QDense]:
+                    conv_dense_names.append(layer.name)
 
         data = [
             [],  # Conv2D
