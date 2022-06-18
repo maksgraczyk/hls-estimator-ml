@@ -45,7 +45,7 @@ class SingleOutputEstimation(BaseEstimation):
         def get_model(path, layer_type):
             result = {}
 
-            for x in self.METRICS[device]:
+            for x in self.metrics[device]:
                 K.clear_session()
                 result[x] = load(path / layer_type / x)
 
@@ -54,13 +54,108 @@ class SingleOutputEstimation(BaseEstimation):
         if device not in ['asic', 'fpga']:
             raise RuntimeError('device must be either "asic" or "fpga"')
 
-        layer_types = ['Conv2D', 'MaxPooling2D', 'BatchNormalization',
-                       'Dense', 'ReLU', 'Softmax']
+        self._layer_types = ['Conv2D', 'MaxPooling2D', 'BatchNormalization',
+                             'Dense', 'ReLU', 'Softmax']
         
         path = Path(__file__).parent / 'single_models' / device
 
-        self._models = [get_model(path, l) for l in layer_types]
+        self._models = [get_model(path, l) for l in self._layer_types]
         self._device = device
+
+        # Denormalisation values in form of (mean, std)
+        self._denorm_values = {
+            'asic': {
+                'Conv2D': {
+                    'latency': (11.983796296296296, 6.0135108368324595),
+                    'static_power': (1101.7093240740742, 1042.2271158405176),
+                    'dynamic_power': (9733.262412037036, 11498.909028900627),
+                    'area': (47556.48785699915, 45022.00946397084)
+                },
+
+                'MaxPooling2D': {
+                    'latency': (15.729166666666666, 5.365156476186097),
+                    'static_power': (542.4211979166666, 564.3565553101994),
+                    'dynamic_power': (5197.198125, 7953.824331578362),
+                    'area': (17363.28441397349, 19505.551659748806)
+                },
+
+                'BatchNormalization': {
+                    'latency': (11.666666666666666, 6.252399190470667),
+                    'static_power': (349.09130208333335, 258.55263566899623),
+                    'dynamic_power': (3429.736770833333, 3408.22695729471),
+                    'area': (14788.143821716309, 10876.457377970793)
+                },
+
+                'Dense': {
+                    'latency': (12.058333333333334, 5.958286795730159),
+                    'static_power': (1812.3571166666668, 3339.7476801813314),
+                    'dynamic_power': (16742.46973333333, 35692.11242679985),
+                    'area': (83765.3372167015, 150686.05624703845)
+                },
+
+                'ReLU': {
+                    'latency': (11.666666666666666, 6.25617974056345),
+                    'static_power': (78.06141025641024, 75.52456104194842),
+                    'dynamic_power': (960.0777564102565, 1185.5016544571924),
+                    'area': (3521.1425543565015, 3659.92692818571)
+                },
+
+                'Softmax': {
+                    'latency': (13.076923076923077, 5.080326426440557),
+                    'static_power': (2682.8353846153846, 2503.5801154439932),
+                    'dynamic_power': (14352.25641025641, 18741.727326299333),
+                    'area': (129227.42028182592, 122334.95326464878)
+                }
+            },
+
+            'fpga': {
+                'Conv2D': {
+                    'latency': (12.654320987654321, 5.48810416508885),
+                    'lut': (5352.7390946502055, 4232.007428713101),
+                    'ff': (534.2362139917695, 875.4978377622335),
+                    'dsp': (61.01728395061728, 116.49248774499999),
+                    'dynamic_power': (0.10693415637860064, 0.1312336809734344)
+                },
+
+                'MaxPooling2D': {
+                    'latency': (19.583333333333332, 9.6987791822748),
+                    'lut': (3648.1614583333335, 3692.3845443032315),
+                    'ff': (1658.5, 2669.2571745476953),
+                    'dynamic_power': (0.07095312499999983, 0.10640770594966893)
+                },
+
+                'BatchNormalization': {
+                    'latency': (11.666666666666666, 6.252399190470667),
+                    'lut': (456.40625, 353.03002788573843),
+                    'ff': (681.78125, 503.215310014495),
+                    'dsp': (40.359375, 29.501814934408422),
+                    'dynamic_power': (0.02099479166666647, 0.02118368862664657)
+                },
+
+                'Dense': {
+                    'latency': (12.775, 5.622934242123297),
+                    'lut': (9546.573333333334, 15602.34117394071),
+                    'ff': (1163.3275, 2978.9257248162567),
+                    'dsp': (172.885, 456.3794641389332),
+                    'dynamic_power': (0.24526666666666658, 0.5336967216636095)
+                },
+
+                'ReLU': {
+                    'latency': (11.666666666666666, 6.25617974056345),
+                    'lut': (545.6153846153846, 504.33745054264125),
+                    'ff': (562.6346153846154, 553.7837249503195),
+                    'dynamic_power': (0.003993589743589633, 0.005217213191179378)
+                },
+
+                'Softmax': {
+                    'latency': (21.923076923076923, 5.208215248323987),
+                    'lut': (6145.871794871795, 5872.558664892551),
+                    'ff': (900.6153846153846, 2085.272361554324),
+                    'dsp': (68.07692307692308, 63.661268327140974),
+                    'dynamic_power': (0.0657692307692306, 0.09270708300268324)
+                }
+            }
+        }
 
     def _get_model_index(self, layer):
         index = None
@@ -278,6 +373,32 @@ class SingleOutputEstimation(BaseEstimation):
                 result[layer_names[i]] = share
         
         return result
+
+    @property
+    def metrics(self):
+        return {
+            'asic': ['latency', 'static_power', 'dynamic_power', 'area'],
+            'fpga': ['latency', 'lut', 'ff', 'dsp', 'dynamic_power']
+        }
+
+    @property
+    def units(self):
+        return {
+            'asic': {
+                'latency': 'ns',
+                'static_power': 'uW',
+                'dynamic_power': 'uW',
+                'area': 'um^2'
+            },
+
+            'fpga': {
+                'latency': 'ns',
+                'lut': '',
+                'ff': '',
+                'dsp': '',
+                'dynamic_power': 'W'
+            }
+        }
     
     def predict(self, model, clock_frequency):
         super().predict(model, clock_frequency)
@@ -311,7 +432,7 @@ class SingleOutputEstimation(BaseEstimation):
             []   # Softmax
         ]
 
-        result = {x: 0 for x in self.METRICS[self._device]}
+        result = {x: 0 for x in self.metrics[self._device]}
         null_parameter_shares = \
             self._get_null_parameter_shares(model, conv_dense_names)
 
@@ -324,27 +445,20 @@ class SingleOutputEstimation(BaseEstimation):
             models = self._models[i]
 
             for metric in result.keys():
-                result[metric] += \
-                    np.sum(models[metric].predict(np.array(data[i])))
+                model = models[metric]
+                if model is None:
+                    continue
 
-        units = {
-            'asic': {
-                'latency': 'ns',
-                'static_power': 'uW',
-                'dynamic_power': 'uW',
-                'area': 'um^2'
-            },
+                predicted = model.predict(np.array(data[i]), verbose=0)
 
-            'fpga': {
-                'latency': 'ns',
-                'lut': '',
-                'ff': '',
-                'dsp': '',
-                'dynamic_power': 'W'
-            }
-        }
+                layer_type = self._layer_types[i]
+                mean, std = \
+                    self._denorm_values[self._device][layer_type][metric]
+                predicted = (predicted * std) + mean
+
+                result[metric] += np.sum(predicted)
         
         for key, value in result.items():
-            result[key] = (value, units[self._device][key])
+            result[key] = (value, self.units[self._device][key])
 
         return result

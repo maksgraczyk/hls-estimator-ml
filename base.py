@@ -3,10 +3,23 @@ from abc import ABC, abstractmethod
 
 
 class BaseEstimation(ABC):
-    METRICS = {
-        'asic': ['latency', 'static_power', 'dynamic_power', 'area'],
-        'fpga': ['latency', 'lut', 'ff', 'dsp', 'dynamic_power']
-    }
+    @abstractmethod
+    def metrics(self):
+        """
+        Metrics to predict for each device type, in form of the following dict:
+        {'asic': (list of strings representing metrics),
+         'fpga': (list of strings representing metrics)}
+        """
+        pass
+
+    @abstractmethod
+    def units(self):
+        """
+        Units for each metric, in form of the following dict:
+        {'asic': {(metric in str): (unit in str)},
+         'fpga': {(metric in str): (unit in str)}}
+        """
+        pass
     
     @abstractmethod
     def predict(self, model, clock_frequency):
