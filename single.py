@@ -8,7 +8,9 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.layers import MaxPooling2D, Activation, ReLU, Softmax
 from tensorflow.keras.activations import softmax
 from qkeras.quantizers import quantized_bits, quantized_relu
-from qkeras.layers import QConv2D, QBatchNormalization, QDense
+from qkeras.qlayers import QDense
+from qkeras.qnormalization import QBatchNormalization
+from qkeras.qconvolutional import QConv2D
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
