@@ -17,37 +17,40 @@ from tempfile import TemporaryDirectory
 
 class SingleOutputEstimation(BaseEstimation):
     def __init__(self):
+        def load(path):
+            return load_model(path) if path.exists() else None
+
         path_asic = Path(__file__).parent / 'single_models' / 'asic'
         path_fpga = Path(__file__).parent / 'single_models' / 'fpga'
         
         self._models = {
             'asic': [
-                {x: load_model(path_asic / f'Conv2D_{x}')
+                {x: load(path_asic / 'Conv2D' / x)
                  for x in self.METRICS['asic']},
-                {x: load_model(path_asic / f'MaxPooling2D_{x}')
+                {x: load(path_asic / 'MaxPooling2D' / x)
                  for x in self.METRICS['asic']},
-                {x: load_model(path_asic / f'BatchNormalization_{x}')
+                {x: load(path_asic / 'BatchNormalization' / x)
                  for x in self.METRICS['asic']},
-                {x: load_model(path_asic / f'Dense_{x}')
+                {x: load(path_asic / 'Dense' / x)
                  for x in self.METRICS['asic']},
-                {x: load_model(path_asic / f'ReLU_{x}')
+                {x: load(path_asic / 'ReLU' / x)
                  for x in self.METRICS['asic']},
-                {x: load_model(path_asic / f'Softmax_{x}')
+                {x: load(path_asic / 'Softmax' / x)
                  for x in self.METRICS['asic']}
             ],
 
             'fpga': [
-                {x: load_model(path_fpga / f'Conv2D_{x}')
+                {x: load(path_fpga / 'Conv2D' / x)
                  for x in self.METRICS['fpga']},
-                {x: load_model(path_fpga / f'MaxPooling2D_{x}')
+                {x: load(path_fpga / 'MaxPooling2D' / x)
                  for x in self.METRICS['fpga']},
-                {x: load_model(path_fpga / f'BatchNormalization_{x}')
+                {x: load(path_fpga / 'BatchNormalization' / x)
                  for x in self.METRICS['fpga']},
-                {x: load_model(path_fpga / f'Dense_{x}')
+                {x: load(path_fpga / 'Dense' / x)
                  for x in self.METRICS['fpga']},
-                {x: load_model(path_fpga / f'ReLU_{x}')
+                {x: load(path_fpga / 'ReLU' / x)
                  for x in self.METRICS['fpga']},
-                {x: load_model(path_fpga / f'Softmax_{x}')
+                {x: load(path_fpga / 'Softmax' / x)
                  for x in self.METRICS['fpga']}
             ]
         }
