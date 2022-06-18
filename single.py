@@ -62,8 +62,99 @@ class SingleOutputEstimation(BaseEstimation):
         self._models = [get_model(path, l) for l in self._layer_types]
         self._device = device
 
+    @property
+    def metrics(self):
+        return {
+            'asic': ['latency', 'static_power', 'dynamic_power', 'area'],
+            'fpga': ['latency', 'lut', 'ff', 'dsp', 'dynamic_power']
+        }
+
+    @property
+    def units(self):
+        return {
+            'asic': {
+                'latency': 'ns',
+                'static_power': 'uW',
+                'dynamic_power': 'uW',
+                'area': 'um^2'
+            },
+
+            'fpga': {
+                'latency': 'ns',
+                'lut': '',
+                'ff': '',
+                'dsp': '',
+                'dynamic_power': 'W'
+            }
+        }
+    
+    def predict(self, model, clock_frequency):
+        super().predict(model, clock_frequency)
+
+        layers_by_type = [
+            [],  # Conv2D
+            [],  # MaxPooling2D
+            [],  # BatchNormalization
+            [],  # Dense
+            [],  # ReLU
+            []   # Softmax
+        ]
+
+        conv_dense_names = []
+
+        for layer in model.layers:
+            index = self._get_model_index(layer)
+
+            if index is not None:
+                layers_by_type[self._get_model_index(layer)].append(layer)
+
+                if type(layer) in [QConv2D, QDense]:
+                    conv_dense_names.append(layer.name)
+
+        data = [
+            [],  # Conv2D
+            [],  # MaxPooling2D
+            [],  # BatchNormalization
+            [],  # Dense
+            [],  # ReLU
+            []   # Softmax
+        ]
+
+        result = {x: 0 for x in self.metrics[self._device]}
+        null_parameter_shares = \
+            self._get_null_parameter_shares(model, conv_dense_names)
+
+        for i, layers in enumerate(layers_by_type):
+            data[i] = [[clock_frequency] +
+                       self._get_layer_data(layer, null_parameter_shares)
+                       for layer in layers]
+
+        for i in range(len(data)):
+            models = self._models[i]
+
+            for metric in result.keys():
+                model = models[metric]
+                if model is None:
+                    continue
+
+                predicted = model.predict(np.array(data[i]), verbose=0)
+
+                layer_type = self._layer_types[i]
+                mean, std = \
+                    self._denorm_values[self._device][layer_type][metric]
+                predicted = (predicted * std) + mean
+
+                result[metric] += np.sum(predicted)
+        
+        for key, value in result.items():
+            result[key] = (value, self.units[self._device][key])
+
+        return result
+
+    @property
+    def _denorm_values(self):
         # Denormalisation values in form of (mean, std)
-        self._denorm_values = {
+        return {
             'asic': {
                 'Conv2D': {
                     'latency': (11.983796296296296, 6.0135108368324595),
@@ -337,8 +428,7 @@ class SingleOutputEstimation(BaseEstimation):
                 weights = []
                 biases = []
 
-                n = \
-                    re.search(r'w(\d+)\.txt', str(weight_file_path)).group(1)
+                n = re.search(r'w(\d+)\.txt', str(weight_file_path)).group(1)
                 
                 with weight_file_path.open(mode='r') as f:
                     for line in f:
@@ -372,93 +462,4 @@ class SingleOutputEstimation(BaseEstimation):
 
                 result[layer_names[i]] = share
         
-        return result
-
-    @property
-    def metrics(self):
-        return {
-            'asic': ['latency', 'static_power', 'dynamic_power', 'area'],
-            'fpga': ['latency', 'lut', 'ff', 'dsp', 'dynamic_power']
-        }
-
-    @property
-    def units(self):
-        return {
-            'asic': {
-                'latency': 'ns',
-                'static_power': 'uW',
-                'dynamic_power': 'uW',
-                'area': 'um^2'
-            },
-
-            'fpga': {
-                'latency': 'ns',
-                'lut': '',
-                'ff': '',
-                'dsp': '',
-                'dynamic_power': 'W'
-            }
-        }
-    
-    def predict(self, model, clock_frequency):
-        super().predict(model, clock_frequency)
-
-        layers_by_type = [
-            [],  # Conv2D
-            [],  # MaxPooling2D
-            [],  # BatchNormalization
-            [],  # Dense
-            [],  # ReLU
-            []   # Softmax
-        ]
-
-        conv_dense_names = []
-
-        for layer in model.layers:
-            index = self._get_model_index(layer)
-
-            if index is not None:
-                layers_by_type[self._get_model_index(layer)].append(layer)
-
-                if type(layer) in [QConv2D, QDense]:
-                    conv_dense_names.append(layer.name)
-
-        data = [
-            [],  # Conv2D
-            [],  # MaxPooling2D
-            [],  # BatchNormalization
-            [],  # Dense
-            [],  # ReLU
-            []   # Softmax
-        ]
-
-        result = {x: 0 for x in self.metrics[self._device]}
-        null_parameter_shares = \
-            self._get_null_parameter_shares(model, conv_dense_names)
-
-        for i, layers in enumerate(layers_by_type):
-            data[i] = [[clock_frequency] +
-                       self._get_layer_data(layer, null_parameter_shares)
-                       for layer in layers]
-
-        for i in range(len(data)):
-            models = self._models[i]
-
-            for metric in result.keys():
-                model = models[metric]
-                if model is None:
-                    continue
-
-                predicted = model.predict(np.array(data[i]), verbose=0)
-
-                layer_type = self._layer_types[i]
-                mean, std = \
-                    self._denorm_values[self._device][layer_type][metric]
-                predicted = (predicted * std) + mean
-
-                result[metric] += np.sum(predicted)
-        
-        for key, value in result.items():
-            result[key] = (value, self.units[self._device][key])
-
         return result
