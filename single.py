@@ -15,44 +15,50 @@ from tempfile import TemporaryDirectory
 
 
 class SingleOutputEstimation(BaseEstimation):
-    def __init__(self):
+    """
+    A class representing single-output regression for estimating hardware
+    metrics for neural network models. It deploys one multi-layer perceptron
+    per layer type per hardware metric.
+
+    QConv2D, QBatchNormalization, QDense, and quantised ReLU from QKeras
+    are supported, along with Softmax from Keras. Keras Activation objects
+    are also supported if they are set for Softmax.
+
+    If QKeras layers are used, they must be quantised with the quantized_bits
+    quantiser or quantised_relu in case of ReLU.
+
+    This approximation class works best for Xilinx xcvu9p-flgb2104-2L-e FPGAs
+    and ASICs implemented in the 45 nm technology (ideally Nangate).
+
+    Args:
+    ----------
+    device : str, either 'asic' or 'fpga'
+       The device type for approximation.
+    """
+
+    def __init__(self, device):
         def load(path):
             return load_model(path) if path.exists() else None
 
-        path_asic = Path(__file__).parent / 'single_models' / 'asic'
-        path_fpga = Path(__file__).parent / 'single_models' / 'fpga'
-        
-        self._models = {
-            'asic': [
-                {x: load(path_asic / 'Conv2D' / x)
-                 for x in self.METRICS['asic']},
-                {x: load(path_asic / 'MaxPooling2D' / x)
-                 for x in self.METRICS['asic']},
-                {x: load(path_asic / 'BatchNormalization' / x)
-                 for x in self.METRICS['asic']},
-                {x: load(path_asic / 'Dense' / x)
-                 for x in self.METRICS['asic']},
-                {x: load(path_asic / 'ReLU' / x)
-                 for x in self.METRICS['asic']},
-                {x: load(path_asic / 'Softmax' / x)
-                 for x in self.METRICS['asic']}
-            ],
+        def get_model(path, layer_type):
+            result = {}
 
-            'fpga': [
-                {x: load(path_fpga / 'Conv2D' / x)
-                 for x in self.METRICS['fpga']},
-                {x: load(path_fpga / 'MaxPooling2D' / x)
-                 for x in self.METRICS['fpga']},
-                {x: load(path_fpga / 'BatchNormalization' / x)
-                 for x in self.METRICS['fpga']},
-                {x: load(path_fpga / 'Dense' / x)
-                 for x in self.METRICS['fpga']},
-                {x: load(path_fpga / 'ReLU' / x)
-                 for x in self.METRICS['fpga']},
-                {x: load(path_fpga / 'Softmax' / x)
-                 for x in self.METRICS['fpga']}
-            ]
-        }
+            for x in self.METRICS[device]:
+                K.clear_session()
+                result[x] = load(path / layer_type / x)
+
+            return result
+
+        if device not in ['asic', 'fpga']:
+            raise RuntimeError('device must be either "asic" or "fpga"')
+
+        layer_types = ['Conv2D', 'MaxPooling2D', 'BatchNormalization',
+                       'Dense', 'ReLU', 'Softmax']
+        
+        path = Path(__file__).parent / 'single_models' / device
+
+        self._models = [get_model(path, l) for l in layer_types]
+        self._device = device
 
     def _get_model_index(self, layer):
         index = None
@@ -301,7 +307,7 @@ class SingleOutputEstimation(BaseEstimation):
             []   # Softmax
         ]
 
-        result = {x: 0 for x in self.METRICS[device]}
+        result = {x: 0 for x in self.METRICS[self._device]}
         null_parameter_shares = \
             self._get_null_parameter_shares(model, conv_dense_names)
 
@@ -310,8 +316,8 @@ class SingleOutputEstimation(BaseEstimation):
                        self._get_layer_data(layer, null_parameter_shares)
                        for layer in layers]
 
-        for i in len(data):
-            models = self._models[device][i]
+        for i in range(len(data)):
+            models = self._models[i]
 
             for metric in result.keys():
                 result[metric] += \
@@ -335,6 +341,6 @@ class SingleOutputEstimation(BaseEstimation):
         }
         
         for key, value in result.items():
-            result[key] = (value, units[device][key])
+            result[key] = (value, units[self._device][key])
 
         return result
