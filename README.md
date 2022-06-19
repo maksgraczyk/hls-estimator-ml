@@ -1,1 +1,1 @@
-# hls4ml-estimation
+# hls-estimator-ml
