@@ -1,2 +1,2 @@
-from tool.base import *
-from tool.single import *
+from .base import *
+from .single import *
