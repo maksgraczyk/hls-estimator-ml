@@ -2,6 +2,8 @@ import numpy as np
 import hls4ml
 import re
 import sys
+import io
+import contextlib
 from . import BaseEstimation
 from hls4ml.converters import convert_from_keras_model
 from tensorflow.keras import backend as K
@@ -416,13 +418,16 @@ class SingleOutputEstimation(BaseEstimation):
         return layer_data
 
     def _get_null_parameter_shares(self, model, layer_names):
-        config = hls4ml.utils.config_from_keras_model(model=model,
-                                                      granularity='name')
         result = {}
 
         with TemporaryDirectory() as tmp_dir:
-            convert_from_keras_model(model, hls_config=config,
-                                     output_dir=tmp_dir).write()
+            with contextlib.redirect_stdout(io.StringIO()):
+                config = \
+                    hls4ml.utils.config_from_keras_model(model=model,
+                                                         granularity='name')
+
+                convert_from_keras_model(model, hls_config=config,
+                                         output_dir=tmp_dir).write()
 
             tmp_path = Path(tmp_dir) / 'firmware' / 'weights'
             weight_file_paths = list(filter(lambda x: x.match('w*.txt'),
