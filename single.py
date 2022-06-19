@@ -130,6 +130,9 @@ class SingleOutputEstimation(BaseEstimation):
                        for layer in layers]
 
         for i in range(len(data)):
+            if len(data[i]) == 0:
+                continue
+
             models = self._models[i]
 
             for metric in result.keys():
