@@ -427,7 +427,8 @@ class SingleOutputEstimation(BaseEstimation):
             tmp_path = Path(tmp_dir) / 'firmware' / 'weights'
             weight_file_paths = list(filter(lambda x: x.match('w*.txt'),
                                             tmp_path.iterdir()))
-            
+            weight_file_paths.sort(key=lambda x: int(x.stem[1:]))
+
             for i, weight_file_path in enumerate(weight_file_paths):
                 weights = []
                 biases = []
