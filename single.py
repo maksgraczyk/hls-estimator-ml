@@ -6,7 +6,8 @@ from . import BaseEstimation
 from hls4ml.converters import convert_from_keras_model
 from tensorflow.keras import backend as K
 from tensorflow.keras.models import load_model
-from tensorflow.keras.layers import MaxPooling2D, Activation, ReLU, Softmax
+from tensorflow.keras.layers import MaxPooling2D, Activation, ReLU, Softmax, \
+    Flatten
 from tensorflow.keras.activations import softmax
 from qkeras.quantizers import quantized_bits, quantized_relu
 from qkeras.qlayers import QDense, QActivation
@@ -268,12 +269,12 @@ class SingleOutputEstimation(BaseEstimation):
             index = 4
         elif isinstance(layer, Softmax):
             index = 5
-        elif isinstance(layer, Activation) and isinstance(layer.activation,
-                                                          softmax):
+        elif isinstance(layer, Activation) and layer.activation == softmax:
             index = 5
 
-        if index is None:
-            print(f'Layer type {type(layer)} not supported, ignoring',
+        if index is None and not isinstance(layer, Flatten):
+            print(f'Layer f{layer.name} of type {type(layer)} not supported, '
+                  'ignoring',
                   file=sys.stderr)
 
         return index
@@ -400,7 +401,7 @@ class SingleOutputEstimation(BaseEstimation):
                           bitwidth]
         elif isinstance(layer, Softmax) or \
              (isinstance(layer, Activation) and \
-              isinstance(layer.activation, softmax)):
+              layer.activation == softmax):
             inputs = 1
 
             for num in layer.input_shape:
