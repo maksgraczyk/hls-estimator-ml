@@ -19,10 +19,11 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 
-class SingleOutputEstimation(BaseEstimation):
+class CatapultSingleOutputEstimation(BaseEstimation):
     """
     A class representing single-output regression for estimating hardware
-    metrics for neural network models. It deploys one multi-layer perceptron
+    metrics for neural network models after being processed by hls4ml and
+    synthesised by Siemens Catapult HLS. It deploys one multi-layer perceptron
     per layer type per hardware metric.
 
     QConv2D, QBatchNormalization, QDense, and quantised ReLU from QKeras
@@ -30,10 +31,16 @@ class SingleOutputEstimation(BaseEstimation):
     are also supported if they are set for Softmax.
 
     If QKeras layers are used, they must be quantised with the quantized_bits
-    quantiser or quantised_relu in case of ReLU.
+    quantiser or quantized_relu in case of ReLU.
 
-    This approximation class works best for Xilinx xcvu9p-flgb2104-2L-e FPGAs
-    and ASICs implemented in the 45 nm technology (ideally Nangate).
+    This approximation class works best for neural networks synthesised with
+    Siemens Catapult HLS 2021.1 for Xilinx xcvu9p-flgb2104-2L-e FPGAs and
+    ASICs implemented in the 45 nm technology (ideally Nangate).
+
+    The current version uses hls4ml for calculating the zero parameter
+    shares for QConv2D and QDense layers. Running hls4ml is not strictly
+    necessary though and this part may be removed in the future versions of
+    HLSEstimatorML.
 
     Args:
     ----------
