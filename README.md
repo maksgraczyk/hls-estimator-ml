@@ -59,6 +59,8 @@ If you want to know more details, you can have a look at the docstrings, e.g. in
 
 ## Future work
 HLSEstimatorML is built with extensibility in mind. Here are some points describing the potential future work:
+* Adding support for non-QKeras neural networks (as the underlying estimation models work on more abstract inputs and are 
+therefore not tied to QKeras).
 * Generalising HLSEstimatorML so that no separate training is required for every extra FPGA device or ASIC technology.
 * Adding support of other hls4ml backends and other HLS-based ML frameworks.
 * Including different machine learning algorithms and more accurate models for the estimation.
