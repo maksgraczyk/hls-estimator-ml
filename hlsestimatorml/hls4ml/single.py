@@ -412,8 +412,8 @@ class SingleOutputEstimation(BaseEstimation):
 
             layer_data = [inputs]
         else:
-            raise NotImplementedError(f'Layer type {type(layer)} '
-                                      'not supported')
+            raise NotImplementedError(f'Layer f{layer.name} of type '
+                                      f'{type(layer)} not supported')
 
         return layer_data
 
