@@ -4,7 +4,7 @@ import re
 import sys
 import io
 import contextlib
-from . import BaseEstimation
+from .. import BaseEstimation
 from hls4ml.converters import convert_from_keras_model
 from tensorflow.keras import backend as K
 from tensorflow.keras.models import load_model
