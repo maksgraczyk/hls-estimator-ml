@@ -17,6 +17,9 @@ See the figure below for the graphical explanation. The details may vary dependi
   * FPGAs: Xilinx Virtex UltraScale+ xcvu9p-flgb2104-2L-e
   * ASICs: Nangate 45 nm technology
 
+## Supported ML frameworks for defining neural networks
+* [QKeras](https://github.com/google/qkeras)
+
 ## Estimated outputs
 * FPGAs: latency, LUT count, FF count, DSP count, dynamic power
 * ASICs: latency, static power, dynamic power, silicon area
