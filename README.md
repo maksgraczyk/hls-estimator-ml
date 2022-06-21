@@ -14,7 +14,7 @@ See the figure below for the graphical explanation. The details may vary dependi
 
 ## Supported HLS-based ML frameworks and devices
 * [hls4ml](https://github.com/fastmachinelearning/hls4ml) with [the Catapult HLS backend](https://github.com/fastmachinelearning/hls4ml-catapult-framework) *(a multi-layer perceptron is deployed independently per metric per layer type, no non-SRAM memory supported because of the lack of such support in the backend)*
-  * FPGAs: Xilinx Virtex UltraScale+ xcvu9p-flgb2104-2-1e
+  * FPGAs: Xilinx Virtex UltraScale+ xcvu9p-flgb2104-2L-e
   * ASICs: Nangate 45 nm technology
 
 ## Estimated outputs
