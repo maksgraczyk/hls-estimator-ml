@@ -25,7 +25,11 @@ See the figure below for the graphical explanation. The details may vary dependi
 * ASICs: latency, static power, dynamic power, silicon area
 
 ## How to use this tool?
-No PyPI version is available at the moment, so the installation has to be done manually. Clone this repository and run the following command inside:
+No PyPI version is available at the moment, so the installation has to be done via git. Run the following command:
+```
+pip install git+https://github.com/maksgraczyk/hls-estimator-ml
+```
+Alternatively, if you want to change the code, clone this repository and run the following command inside:
 ```
 pip install -e .
 ```
